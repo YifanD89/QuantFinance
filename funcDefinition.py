@@ -90,12 +90,18 @@ def Target_360():
 
 def Target_300():
 	df = date
-	df['buy'] = 360 
-	df['sell'] = 360 
+	df['buy'] = 300 
+	df['sell'] = 300 
 	return(df)
 
 def Avg_Prev30():
 	df = date
 	df['buy'] = df['Close'].rolling(21).mean().replace(np.nan,0)
 	df['sell'] = df['Close'].rolling(21).mean().replace(np.nan,0)
-	# return(df)
+	return(df)
+
+def B380_S420():
+	df = date
+	df['buy'] = 380
+	df['sell'] = 420
+	return(df)

@@ -4,6 +4,7 @@ import yfinance as yf
 import funcDefinition
 import ulti
 import datetime
+import quantstats as qs
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -23,6 +24,7 @@ class strategyConfig():
 ### load signal factors from funcDefinition
 dfs = []
 results = []
+backtests = []
 
 for i in config.index:
 	configi = config.loc[i,:].values.tolist()
@@ -40,22 +42,30 @@ for i in config.index:
 	signal['TotalQut'] = signal['TradeQut'].cumsum()
 	signal['Cash'] = configi[3] - (signal['TradeQut']*signal['Close']).cumsum()
 	signal['TotalExp'] = signal['Cash'] + signal['TotalQut']*signal['Close']
-	# signal = signal.drop(['Datelogic','combine','LO','Trade','TradeQut','TotalQut','Cash'],axis ='columns')
-	result = (signal.loc[pd.Timestamp(configi[2]),'TotalExp'] / signal.loc[pd.Timestamp(configi[1]),'TotalExp']) -1
+	signal['returns'] = (signal['TotalExp']/signal['TotalExp'].shift(1)).replace(np.nan,1) -1
+	backtest = qs.reports.metrics(signal[['returns']], mode="basic",display=False).T
+	backtest = backtest[['Sharpe', 'Max Drawdown','Longest DD Days']]
+	signal = signal.drop(['Datelogic','combine','LO','Trade','TradeQut','TotalQut','Cash','returns'],axis ='columns')
 	signal = signal.rename(columns={'buy':configi[0]+'_buy','sell':configi[0]+'_sell','TotalExp':configi[0]+'_exp'},inplace=False)
+
+	result = (signal.loc[pd.Timestamp(configi[2]),configi[0]+'_exp'] / signal.loc[pd.Timestamp(configi[1]),configi[0]+'_exp']) -1
 
 	dfs.append(signal)
 	results.append(result)
+	backtests.append(backtest)
 	#print(signal)
 
 signal= pd.concat(dfs,axis=1)
+backtests = pd.concat(backtests,axis = 0).reset_index(drop=True)
 signal.to_csv('signal.csv')
 print()
 
 ### build result file
 res = config
 res['result'] = results
+res = pd.concat([res, backtests], axis=1)
 res.to_csv('result.csv')
+
 
 
 
