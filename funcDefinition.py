@@ -2,10 +2,16 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-# spy = yf.download('SPY',start='2022-01-01',end='2022-12-31')
-# spy = spy['Adj Close']
-# spy.name = 'Close'
-# spy.to_csv('price.csv')
+# Ticker = ['SPY','AAPL']
+Ticker = ['SPY']
+price = pd.DataFrame()
+
+for i in Ticker:
+	pricei = yf.download(i,start='2023-01-01',end='2023-12-31')
+	pricei['Ticker'] = i 
+	pricei = pricei[['Ticker','Adj Close']]
+	price = pd.concat([price,pricei])
+price.to_csv('price.csv')
 
 date = pd.read_csv('price.csv', index_col=0)
 # print(date)
@@ -94,10 +100,28 @@ def Target_300():
 	df['sell'] = 300 
 	return(df)
 
+def Target_100():
+	df = date
+	df['buy'] = 100 
+	df['sell'] = 100 
+	return(df)
+
 def Avg_Prev30():
 	df = date
 	df['buy'] = df['Close'].rolling(21).mean().replace(np.nan,0)
-	df['sell'] = df['Close'].rolling(21).mean().replace(np.nan,0)
+	df['sell'] = df['Close'].rolling(21).mean().replace(np.nan,10000)
+	return(df)
+
+def Avg_Prev90():
+	df = date
+	df['buy'] = df['Close'].rolling(63).mean().replace(np.nan,0)
+	df['sell'] = df['Close'].rolling(63).mean().replace(np.nan,10000)
+	return(df)
+
+def Avg_Prev180():
+	df = date
+	df['buy'] = df['Close'].rolling(126).mean().replace(np.nan,0)
+	df['sell'] = df['Close'].rolling(126).mean().replace(np.nan,10000)
 	return(df)
 
 def B380_S420():
