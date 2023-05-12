@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-# Ticker = ['SPY','AAPL']
+# Ticker = ['SPY','AAPL','^VIX']
 Ticker = ['SPY']
 price = pd.DataFrame()
 
 for i in Ticker:
-	pricei = yf.download(i,start='2023-01-01',end='2023-12-31')
+	pricei = yf.download(i,start='2022-01-01',end='2023-12-31')
 	pricei['Ticker'] = i 
 	pricei = pricei[['Ticker','Adj Close']]
 	price = pd.concat([price,pricei])
@@ -128,4 +128,16 @@ def B380_S420():
 	df = date
 	df['buy'] = 380
 	df['sell'] = 420
+	return(df)
+
+def Target_25():
+	df = date
+	df['buy'] = 25
+	df['sell'] = 25
+	return(df)
+
+def Target_20():
+	df = date
+	df['buy'] = 20
+	df['sell'] = 20
 	return(df)

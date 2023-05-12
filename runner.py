@@ -38,27 +38,54 @@ for i in config.index:
 
 
 	signal['combine'] = signal['combine'] * signal['Datelogic']
-	signal = ulti.LO(signal, 'combine')
-	signal['Trade'] = signal['LO'] - (signal['LO'].shift(1).replace(np.nan,0))
-	# signal['TradeQut'] = (signal['Trade']*configi[3]/signal['Adj Close']).apply(np.floor) #buy np.floor, sell np.ceiling
-	signal.loc[signal['Trade']>=0,'TradeQut'] = (signal['Trade']*configi[3]/signal['Adj Close']).apply(np.floor)
-	signal.loc[signal['Trade']<0,'TradeQut'] = (signal['Trade']*configi[3]/signal['Adj Close']).apply(np.ceil)
+	signal = ulti.LO(signal, 'combine').round(1)
+	signal['Trade'] = (signal['LO'] - (signal['LO'].shift(1).replace(np.nan,0))).round(1)
+	signal['TradeQut'] = 0
+	signal['TotalQut'] = 0
+	signal['Cash'] = configi[3]
+	signal['TotalExp'] = 0
+	signal['returns'] = 0
 
-	signal['TotalQut'] = signal['TradeQut'].cumsum()
-	signal['Cash'] = configi[3] - (signal['TradeQut']*signal['Adj Close']).cumsum()
-	signal['TotalExp'] = signal['Cash'] + signal['TotalQut']*signal['Adj Close']
+	print()
+
+	signal = signal.reset_index()
+
+	## trade with configi[3] begin cash will create error, should consider rebalance
+	## need a for loop
+
+	for i in signal.index:
+
+		#first day 
+		signal.loc[(signal['Date']==configi[1]) & (signal['Trade']>0),'TradeQut'] =\
+		(configi[3]*0.1/(1-0)/signal['Adj Close']).apply(np.floor).replace(np.nan,0)
+
+		#any day after
+		signal.loc[(signal['Date']>configi[1]) & (signal['Trade']>0),'TradeQut'] =\
+		(signal['Cash'].shift(1)*0.1/(1-signal['LO'].shift(1))/signal['Adj Close']).apply(np.floor).replace(np.nan,0)
+
+		signal.loc[(signal['Date']>configi[1]) & (signal['Trade']<0),'TradeQut'] =\
+		(-signal['TotalQut'].shift(1)*0.1/(signal['LO'].shift(1))).apply(np.ceil).replace(np.nan,0)
+
+		signal.loc[signal['Trade']==0,'TradeQut'] = 0
+		
+		signal['TotalQut'] = signal['TradeQut'].cumsum()
+		signal['Cash'] = configi[3] - (signal['TradeQut']*signal['Adj Close']).cumsum()
+		signal['TotalExp'] = signal['Cash'] + signal['TotalQut']*signal['Adj Close']
+
+	signal = signal.set_index('Date')
 	signal['returns'] = (signal['TotalExp']/signal['TotalExp'].shift(1)).replace(np.nan,1) -1
-	
+			
 	backtest = qs.reports.metrics(signal[['returns']], mode="basic",display=False).T
 	backtest = backtest[['Sharpe', 'Max Drawdown','Longest DD Days']] ## DD includes weekend
 	# signal = signal.drop(['Datelogic','combine','LO','Trade','TradeQut','TotalQut','Cash','returns'],axis ='columns')
+
 	signal = signal.rename(columns={'buy':configi[0]+'_buy','sell':configi[0]+'_sell','TotalExp':configi[0]+'_exp'},inplace=False)
 	result = (signal.loc[pd.Timestamp(configi[2]),configi[0]+'_exp'] / signal.loc[pd.Timestamp(configi[1]),configi[0]+'_exp']) -1
 
 	dfs.append(signal)
 	results.append(result)
 	backtests.append(backtest)
-	#print(signal)
+	# print(signal)
 
 signal= pd.concat(dfs,axis=1)
 backtests = pd.concat(backtests,axis = 0).reset_index(drop=True)
