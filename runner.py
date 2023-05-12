@@ -14,12 +14,13 @@ config = pd.read_csv('config.csv')
 print()
 
 class strategyConfig():
-	def __init__(self,strategy,startDate,endDate,beginCash):
+	def __init__(self,strategy,startDate,endDate,beginCash,step_position):
 		self.strategy = strategy
 		self.startDate = startDate
 		self.endDate = endDate
 		self.beginCash = beginCash
-		print(strategy,startDate,endDate)
+		self.step_position = step_position
+		print(strategy,startDate,endDate,step_position)
 
 ### load signal factors from funcDefinition
 dfs = []
@@ -28,43 +29,38 @@ backtests = []
 
 for i in config.index:
 	configi = config.loc[i,:].values.tolist()
-	strategyConfig(configi[0], configi[1], configi[2], configi[3])
+	strategyConfig(configi[0], configi[1], configi[2], configi[3],configi[4])
 	signal = getattr(funcDefinition, configi[0]) # source signal from definition
 	signal = signal()
 	signal.index = pd.to_datetime(signal.index)
 	signal['Datelogic'] = np.logical_and(signal.index >= pd.Timestamp(configi[1]), signal.index<=pd.Timestamp(configi[2])).astype(int)
-	signal.loc[signal['buy']>=signal['Adj Close'],'combine'] = 0.1 #buy and sell for 10% of beginCash only
-	signal.loc[signal['sell']<=signal['Adj Close'],'combine'] = -0.1
+	signal.loc[signal['buy']>=signal['Adj Close'],'combine'] = configi[4] #buy and sell for fixed % of total position
+	signal.loc[signal['sell']<=signal['Adj Close'],'combine'] = -configi[4]
 
-
-	signal['combine'] = signal['combine'] * signal['Datelogic']
-	signal = ulti.LO(signal, 'combine').round(1)
-	signal['Trade'] = (signal['LO'] - (signal['LO'].shift(1).replace(np.nan,0))).round(1)
+	## factor logic
+	signal['combine'] = signal['combine'] * signal['Datelogic'].round(2)
+	signal = ulti.LO(signal, 'combine').round(2)
+	signal['Trade'] = (signal['LO'] - (signal['LO'].shift(1).replace(np.nan,0))).round(2)
 	signal['TradeQut'] = 0
 	signal['TotalQut'] = 0
 	signal['Cash'] = configi[3]
 	signal['TotalExp'] = 0
 	signal['returns'] = 0
-
-	print()
-
 	signal = signal.reset_index()
 
-	## trade with configi[3] begin cash will create error, should consider rebalance
-	## need a for loop
-
+	## trade logic
 	for i in signal.index:
 
 		#first day 
 		signal.loc[(signal['Date']==configi[1]) & (signal['Trade']>0),'TradeQut'] =\
-		(configi[3]*0.1/(1-0)/signal['Adj Close']).apply(np.floor).replace(np.nan,0)
+		(configi[3]*configi[4]/(1-0)/signal['Adj Close']).apply(np.floor).replace(np.nan,0)
 
 		#any day after
 		signal.loc[(signal['Date']>configi[1]) & (signal['Trade']>0),'TradeQut'] =\
-		(signal['Cash'].shift(1)*0.1/(1-signal['LO'].shift(1))/signal['Adj Close']).apply(np.floor).replace(np.nan,0)
+		(signal['Cash'].shift(1)*configi[4]/(1-signal['LO'].shift(1))/signal['Adj Close']).apply(np.floor).replace(np.nan,0)
 
 		signal.loc[(signal['Date']>configi[1]) & (signal['Trade']<0),'TradeQut'] =\
-		(-signal['TotalQut'].shift(1)*0.1/(signal['LO'].shift(1))).apply(np.ceil).replace(np.nan,0)
+		(-signal['TotalQut'].shift(1)*configi[4]/(signal['LO'].shift(1))).apply(np.ceil).replace(np.nan,0)
 
 		signal.loc[signal['Trade']==0,'TradeQut'] = 0
 		

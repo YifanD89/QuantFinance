@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-# Ticker = ['SPY','AAPL','^VIX']
+Ticker = ['SPY','AAPL','^VIX']
 Ticker = ['SPY']
 price = pd.DataFrame()
 
 for i in Ticker:
-	pricei = yf.download(i,start='2022-01-01',end='2023-12-31')
+	pricei = yf.download(i,start='2023-01-01',end='2023-12-31')
 	pricei['Ticker'] = i 
 	pricei = pricei[['Ticker','Adj Close']]
 	price = pd.concat([price,pricei])
@@ -20,6 +20,30 @@ def Target_480():
 	df = date
 	df['buy'] = 480 # close lower than buy then buy, 0 never buy
 	df['sell'] = 480 # close higher than sell then sell, 10000 never sell
+	return(df)
+
+def Avg_Prev30():
+	df = date
+	df['buy'] = df['Close'].rolling(21).mean().replace(np.nan,0)
+	df['sell'] = df['Close'].rolling(21).mean().replace(np.nan,10000)
+	return(df)
+
+def Avg_Prev90():
+	df = date
+	df['buy'] = df['Close'].rolling(63).mean().replace(np.nan,0)
+	df['sell'] = df['Close'].rolling(63).mean().replace(np.nan,10000)
+	return(df)
+
+def Avg_Prev180():
+	df = date
+	df['buy'] = df['Close'].rolling(126).mean().replace(np.nan,0)
+	df['sell'] = df['Close'].rolling(126).mean().replace(np.nan,10000)
+	return(df)
+
+def B380_S420():
+	df = date
+	df['buy'] = 380
+	df['sell'] = 420
 	return(df)
 
 def Target_470():
@@ -106,28 +130,10 @@ def Target_100():
 	df['sell'] = 100 
 	return(df)
 
-def Avg_Prev30():
+def Target_80():
 	df = date
-	df['buy'] = df['Close'].rolling(21).mean().replace(np.nan,0)
-	df['sell'] = df['Close'].rolling(21).mean().replace(np.nan,10000)
-	return(df)
-
-def Avg_Prev90():
-	df = date
-	df['buy'] = df['Close'].rolling(63).mean().replace(np.nan,0)
-	df['sell'] = df['Close'].rolling(63).mean().replace(np.nan,10000)
-	return(df)
-
-def Avg_Prev180():
-	df = date
-	df['buy'] = df['Close'].rolling(126).mean().replace(np.nan,0)
-	df['sell'] = df['Close'].rolling(126).mean().replace(np.nan,10000)
-	return(df)
-
-def B380_S420():
-	df = date
-	df['buy'] = 380
-	df['sell'] = 420
+	df['buy'] = 80
+	df['sell'] = 80
 	return(df)
 
 def Target_25():
@@ -141,3 +147,4 @@ def Target_20():
 	df['buy'] = 20
 	df['sell'] = 20
 	return(df)
+
