@@ -4,3 +4,5 @@ define function in funcDefinition.py file and update config.csv file
 run runner.py
 
 result in result.csv
+
+Currently, only works on single ticker.
